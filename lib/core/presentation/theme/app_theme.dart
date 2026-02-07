@@ -1,37 +1,33 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide ThemeMode;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 part 'app_theme.g.dart';
+
+enum ThemeModeEnum { light, dark }
 
 @riverpod
 class ThemeMode extends _$ThemeMode {
   static const String _themeKey = 'theme_mode';
 
   @override
-  ThemeModeEnum build() {
-    _loadTheme();
-    return ThemeModeEnum.light;
-  }
-
-  Future<void> _loadTheme() async {
+  Future<ThemeModeEnum> build() async {
     final prefs = await SharedPreferences.getInstance();
     final isDark = prefs.getBool(_themeKey) ?? false;
-    state = isDark ? ThemeModeEnum.dark : ThemeModeEnum.light;
+    return isDark ? ThemeModeEnum.dark : ThemeModeEnum.light;
   }
 
   Future<void> toggleTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    final newTheme = state == ThemeModeEnum.light
+    final current = state.valueOrNull ?? ThemeModeEnum.light;
+    final next = current == ThemeModeEnum.light
         ? ThemeModeEnum.dark
         : ThemeModeEnum.light;
 
-    await prefs.setBool(_themeKey, newTheme == ThemeModeEnum.dark);
-    state = newTheme;
+    await prefs.setBool(_themeKey, next == ThemeModeEnum.dark);
+    state = AsyncData(next);
   }
 }
-
-enum ThemeModeEnum { light, dark }
 
 class AppTheme {
   static ThemeData get lightTheme {

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -9,8 +10,8 @@ Dio dio(Ref ref) {
   final dio = Dio(
     BaseOptions(
       baseUrl: 'https://rickandmortyapi.com/api',
-      connectTimeout: const Duration(seconds: 30), // Увеличено с 10 до 30 секунд
-      receiveTimeout: const Duration(seconds: 30), // Увеличено с 10 до 30 секунд
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -18,16 +19,15 @@ Dio dio(Ref ref) {
     ),
   );
 
-  // Add logging interceptor in debug mode
-  dio.interceptors.add(
-    LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-      requestHeader: true,
-      responseHeader: true,
-      error: true,
-    ),
-  );
+  if (kDebugMode) {
+    dio.interceptors.add(
+      LogInterceptor(
+        requestBody: true,
+        responseBody: false,
+        error: true,
+      ),
+    );
+  }
 
   return dio;
 }

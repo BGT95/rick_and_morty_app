@@ -1,7 +1,8 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:rick_and_morty/features/characters/domain/character.dart';
+
+import '../../utils/logger.dart';
 
 part 'hive_service.g.dart';
 
@@ -16,8 +17,8 @@ class HiveService {
   static const String favoritesBoxName = 'favorites';
   static const String cacheBoxName = 'characters_cache';
 
-  Box<dynamic>? _favoritesBox;
-  Box<dynamic>? _cacheBox;
+  late Box<dynamic> _favoritesBox;
+  late Box<dynamic> _cacheBox;
 
   Future<void> init() async {
     await Hive.initFlutter();
@@ -25,98 +26,88 @@ class HiveService {
     _cacheBox = await Hive.openBox<dynamic>(cacheBoxName);
   }
 
-  // Favorites
-  Future<void> addToFavorites(Character character) async {
-    try {
-      final json = character.toJson();
-      await _favoritesBox?.put(
-        character.id.toString(),
-        json,
+  /// Рекурсивно конвертирует вложенные Map и List из Hive
+  /// в типы, совместимые с `fromJson`.
+  static dynamic deepConvert(dynamic value) {
+    if (value is Map) {
+      return value.map<String, dynamic>(
+        (key, val) => MapEntry(key.toString(), deepConvert(val)),
       );
+    }
+    if (value is List) {
+      return value.map(deepConvert).toList();
+    }
+    return value;
+  }
+
+  // ── Favorites ──
+
+  Future<void> saveFavorite(String id, Map<String, dynamic> json) async {
+    try {
+      await _favoritesBox.put(id, json);
     } catch (e) {
-      print('Ошибка при добавлении в избранное: $e');
+      AppLogger.error('Ошибка при сохранении в избранное', error: e);
       rethrow;
     }
   }
 
-  Future<void> removeFromFavorites(int characterId) async {
-    await _favoritesBox?.delete(characterId.toString());
+  Future<void> removeFavorite(String id) async {
+    await _favoritesBox.delete(id);
   }
 
-  bool isFavorite(int characterId) {
-    return _favoritesBox?.containsKey(characterId.toString()) ?? false;
+  bool containsFavorite(String id) {
+    return _favoritesBox.containsKey(id);
   }
 
-  List<Character> getFavorites() {
+  List<Map<String, dynamic>> getAllFavorites() {
     try {
-      final favorites = _favoritesBox?.values.toList() ?? [];
-      return favorites
-          .map((json) {
-            if (json is Map) {
-              return Character.fromJson(
-                Map<String, dynamic>.from(
-                  json.map((key, value) => MapEntry(key.toString(), value)),
-                ),
-              );
-            }
-            throw Exception('Неверный формат данных в избранном');
-          })
+      return _favoritesBox.values
+          .whereType<Map>()
+          .map((json) => deepConvert(json) as Map<String, dynamic>)
           .toList();
     } catch (e) {
-      print('Ошибка при загрузке избранного: $e');
+      AppLogger.error('Ошибка при загрузке избранного', error: e);
       return [];
     }
   }
 
-  // Cache
-  Future<void> cacheCharacters(List<Character> characters, int page) async {
+  // ── Cache ──
+
+  Future<void> cacheItems(
+    List<Map<String, dynamic>> items,
+    int page,
+  ) async {
     try {
-      for (var character in characters) {
-        final json = character.toJson();
-        await _cacheBox?.put(
-          '${character.id}_page_$page',
-          json,
-        );
+      for (final json in items) {
+        final id = json['id'];
+        await _cacheBox.put('page_${page}_$id', json);
       }
     } catch (e) {
-      print('Ошибка при кэшировании: $e');
-      // Не пробрасываем ошибку, так как кэш не критичен
+      AppLogger.error('Ошибка при кэшировании', error: e);
     }
   }
 
-  List<Character> getCachedCharacters(int page) {
+  List<Map<String, dynamic>> getCachedItems(int page) {
     try {
-      final cached = _cacheBox?.values.toList() ?? [];
-      return cached
-          .map((json) {
-            if (json is Map) {
-              return Character.fromJson(
-                Map<String, dynamic>.from(
-                  json.map((key, value) => MapEntry(key.toString(), value)),
-                ),
-              );
-            }
-            throw Exception('Неверный формат данных в кэше');
-          })
+      final prefix = 'page_${page}_';
+      return _cacheBox.keys
+          .where((key) => key.toString().startsWith(prefix))
+          .map((key) => _cacheBox.get(key))
+          .whereType<Map>()
+          .map((json) => deepConvert(json) as Map<String, dynamic>)
           .toList();
     } catch (e) {
-      print('Ошибка при загрузке кэша: $e');
+      AppLogger.error('Ошибка при загрузке кэша', error: e);
       return [];
     }
   }
 
   Future<void> clearCache() async {
-    await _cacheBox?.clear();
+    await _cacheBox.clear();
   }
 
   Future<void> clearAllData() async {
-    await _favoritesBox?.clear();
-    await _cacheBox?.clear();
-  }
-
-  Future<void> deleteAndReinitialize() async {
-    await Hive.deleteBoxFromDisk(favoritesBoxName);
-    await Hive.deleteBoxFromDisk(cacheBoxName);
-    await init();
+    await _favoritesBox.clear();
+    await _cacheBox.clear();
   }
 }

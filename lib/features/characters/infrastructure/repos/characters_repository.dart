@@ -1,11 +1,12 @@
+import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:rick_and_morty/core/domain/api_response.dart';
-import 'package:rick_and_morty/core/infrastructure/local/hive_service.dart';
-import 'package:rick_and_morty/features/characters/domain/character.dart';
-import 'package:rick_and_morty/features/characters/infrastructure/data_sources/characters_remote_data_source.dart';
-import 'package:dio/dio.dart';
+
+import '../../../../core/domain/api_response.dart';
+import '../../../../core/infrastructure/local/hive_service.dart';
+import '../../domain/character.dart';
+import '../data_sources/characters_remote_data_source.dart';
 
 part 'characters_repository.g.dart';
 
@@ -38,13 +39,16 @@ class CharactersRepository {
         status: status,
       );
 
-      // Cache the results
-      await hiveService.cacheCharacters(response.results, page);
+      // Кэшируем результат
+      await hiveService.cacheItems(
+        response.results.map((c) => c.toJson()).toList(),
+        page,
+      );
 
       return right(response);
     } on DioException catch (e) {
-      // Try to load from cache on error
-      final cached = hiveService.getCachedCharacters(page);
+      // При ошибке сети — пробуем вернуть кэш
+      final cached = _cachedCharacters(page);
       if (cached.isNotEmpty) {
         return right(
           ApiResponse(
@@ -53,7 +57,7 @@ class CharactersRepository {
           ),
         );
       }
-      return left(e.message ?? 'Network error');
+      return left(e.message ?? 'Ошибка сети');
     } catch (e) {
       return left(e.toString());
     }
@@ -64,26 +68,42 @@ class CharactersRepository {
       final character = await remoteDataSource.getCharacterById(id);
       return right(character);
     } on DioException catch (e) {
-      return left(e.message ?? 'Network error');
+      return left(e.message ?? 'Ошибка сети');
     } catch (e) {
       return left(e.toString());
     }
   }
 
-  // Favorites
+  // ── Favorites ──
+
   Future<void> addToFavorites(Character character) async {
-    await hiveService.addToFavorites(character);
+    await hiveService.saveFavorite(
+      character.id.toString(),
+      character.toJson(),
+    );
   }
 
   Future<void> removeFromFavorites(int characterId) async {
-    await hiveService.removeFromFavorites(characterId);
+    await hiveService.removeFavorite(characterId.toString());
   }
 
   bool isFavorite(int characterId) {
-    return hiveService.isFavorite(characterId);
+    return hiveService.containsFavorite(characterId.toString());
   }
 
   List<Character> getFavorites() {
-    return hiveService.getFavorites();
+    return hiveService
+        .getAllFavorites()
+        .map(Character.fromJson)
+        .toList();
+  }
+
+  // ── Helpers ──
+
+  List<Character> _cachedCharacters(int page) {
+    return hiveService
+        .getCachedItems(page)
+        .map(Character.fromJson)
+        .toList();
   }
 }

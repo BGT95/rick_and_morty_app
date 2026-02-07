@@ -2,8 +2,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:rick_and_morty/features/characters/domain/character.dart';
-import 'package:rick_and_morty/features/characters/presentation/providers/characters_provider.dart';
+
+import '../../../features/characters/domain/character.dart';
+import '../../../features/characters/presentation/providers/characters_provider.dart';
 
 class CharacterCard extends HookConsumerWidget {
   final Character character;
@@ -57,15 +58,26 @@ class CharacterCard extends HookConsumerWidget {
                   CachedNetworkImage(
                     imageUrl: character.image,
                     fit: BoxFit.cover,
+                    fadeInDuration: const Duration(milliseconds: 200),
                     placeholder: (context, url) => Container(
                       color: Colors.grey[300],
-                      child: const Center(
-                        child: CircularProgressIndicator(),
+                      child: Center(
+                        child: Icon(
+                          Icons.person,
+                          size: 48,
+                          color: Colors.grey[400],
+                        ),
                       ),
                     ),
                     errorWidget: (context, url, error) => Container(
                       color: Colors.grey[300],
-                      child: const Icon(Icons.error),
+                      child: Center(
+                        child: Icon(
+                          Icons.broken_image,
+                          size: 48,
+                          color: Colors.grey[500],
+                        ),
+                      ),
                     ),
                   ),
                   // Status badge
@@ -121,21 +133,23 @@ class CharacterCard extends HookConsumerWidget {
               ),
             ),
             // Info
-            Expanded(
+            Flexible(
               flex: 2,
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      character.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Flexible(
+                      child: Text(
+                        character.name,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -147,28 +161,31 @@ class CharacterCard extends HookConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 14,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            character.location.name,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            size: 14,
+                            color: Colors.grey[600],
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              character.location.name,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

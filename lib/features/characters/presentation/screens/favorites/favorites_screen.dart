@@ -1,7 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:rick_and_morty/core/presentation/widgets/character_card.dart';
-import 'package:rick_and_morty/features/characters/presentation/providers/characters_provider.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../../../../../core/presentation/widgets/character_card.dart';
+import '../../providers/characters_provider.dart';
+
+part 'favorites_screen.g.dart';
+
+@riverpod
+class SortBy extends _$SortBy {
+  @override
+  String build() => 'name';
+
+  void set(String value) => state = value;
+}
 
 class FavoritesScreen extends ConsumerWidget {
   const FavoritesScreen({super.key});
@@ -9,10 +21,9 @@ class FavoritesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final favorites = ref.watch(favoriteCharactersProvider);
-    final sortBy = ref.watch(_sortByProvider);
+    final sortBy = ref.watch(sortByProvider);
 
-    final sortedFavorites =
-        ref.read(favoriteCharactersProvider.notifier).getSorted(sortBy);
+    final sortedFavorites = ref.watch(sortedFavoritesProvider(sortBy));
 
     return Scaffold(
       appBar: AppBar(
@@ -21,21 +32,12 @@ class FavoritesScreen extends ConsumerWidget {
           PopupMenuButton<String>(
             icon: const Icon(Icons.sort),
             onSelected: (value) {
-              ref.read(_sortByProvider.notifier).state = value;
+              ref.read(sortByProvider.notifier).set(value);
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'name',
-                child: Text('По имени'),
-              ),
-              const PopupMenuItem(
-                value: 'status',
-                child: Text('По статусу'),
-              ),
-              const PopupMenuItem(
-                value: 'species',
-                child: Text('По виду'),
-              ),
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'name', child: Text('По имени')),
+              PopupMenuItem(value: 'status', child: Text('По статусу')),
+              PopupMenuItem(value: 'species', child: Text('По виду')),
             ],
           ),
         ],
@@ -91,5 +93,3 @@ class FavoritesScreen extends ConsumerWidget {
     );
   }
 }
-
-final _sortByProvider = StateProvider<String>((ref) => 'name');

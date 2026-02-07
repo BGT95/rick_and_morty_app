@@ -1,12 +1,10 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:json_annotation/json_annotation.dart';
 
 part 'character.freezed.dart';
 part 'character.g.dart';
 
 @Freezed()
 class Character with _$Character {
-  @JsonSerializable(explicitToJson: true)
   const factory Character({
     required int id,
     required String name,
@@ -28,7 +26,6 @@ class Character with _$Character {
 
 @Freezed()
 class CharacterLocation with _$CharacterLocation {
-  @JsonSerializable(explicitToJson: true)
   const factory CharacterLocation({
     required String name,
     required String url,

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:rick_and_morty/core/presentation/theme/app_theme.dart';
-import 'package:rick_and_morty/core/presentation/widgets/character_card.dart';
-import 'package:rick_and_morty/features/characters/presentation/providers/characters_provider.dart';
+
+import '../../../../../core/presentation/theme/app_theme.dart';
+import '../../../../../core/presentation/widgets/character_card.dart';
+import '../../providers/characters_provider.dart';
 
 class CharactersListScreen extends HookConsumerWidget {
   const CharactersListScreen({super.key});
@@ -11,15 +12,14 @@ class CharactersListScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final charactersAsync = ref.watch(charactersListProvider);
+    final isLoading = ref.watch(isLoadingMoreProvider);
     final scrollController = useScrollController();
-    final notifier = ref.read(charactersListProvider.notifier);
 
     useEffect(() {
       void onScroll() {
-        // Загружаем больше, когда прокрутили до 90% списка
         if (scrollController.position.pixels >=
             scrollController.position.maxScrollExtent * 0.9) {
-          notifier.loadMore();
+          ref.read(charactersListProvider.notifier).loadMore();
         }
       }
 
@@ -52,7 +52,7 @@ class CharactersListScreen extends HookConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(
-              ref.watch(themeModeProvider) == ThemeModeEnum.dark
+              ref.watch(themeModeProvider).valueOrNull == ThemeModeEnum.dark
                   ? Icons.light_mode
                   : Icons.dark_mode,
             ),
@@ -63,28 +63,24 @@ class CharactersListScreen extends HookConsumerWidget {
         ],
       ),
       body: charactersAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        error: (error, stack) => Center(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red,
-              ),
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
-              Text(
-                'Ошибка: $error',
-                textAlign: TextAlign.center,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  'Ошибка: $error',
+                  textAlign: TextAlign.center,
+                ),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () {
-                  ref.read(charactersListProvider.notifier).refresh();
-                },
+                onPressed: () =>
+                    ref.read(charactersListProvider.notifier).refresh(),
                 child: const Text('Повторить'),
               ),
             ],
@@ -92,17 +88,14 @@ class CharactersListScreen extends HookConsumerWidget {
         ),
         data: (characters) {
           if (characters.isEmpty) {
-            return const Center(
-              child: Text('Нет персонажей'),
-            );
+            return const Center(child: Text('Нет персонажей'));
           }
 
-          final hasMore = notifier.hasMoreToShow;
-          
+          final hasMore = ref.watch(hasMoreToShowProvider);
+
           return RefreshIndicator(
-            onRefresh: () async {
-              await ref.read(charactersListProvider.notifier).refresh();
-            },
+            onRefresh: () =>
+                ref.read(charactersListProvider.notifier).refresh(),
             child: GridView.builder(
               controller: scrollController,
               padding: const EdgeInsets.all(16),
@@ -115,18 +108,27 @@ class CharactersListScreen extends HookConsumerWidget {
               itemCount: characters.length + (hasMore ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index == characters.length) {
-                  // Loading indicator at the end (только если есть еще персонажи)
-                  return const Center(
+                  return Center(
                     child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: CircularProgressIndicator(),
+                      padding: const EdgeInsets.all(16),
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : TextButton(
+                              onPressed: () => ref
+                                  .read(charactersListProvider.notifier)
+                                  .loadMore(),
+                              child: const Text('Загрузить ещё'),
+                            ),
                     ),
                   );
                 }
 
-                final character = characters[index];
                 return CharacterCard(
-                  character: character,
+                  character: characters[index],
                   onTap: () {
                     // TODO: Navigate to detail screen
                   },

@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart' as flutter;
 import 'package:flutter/material.dart' hide ThemeMode;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:rick_and_morty/core/infrastructure/local/hive_service.dart';
-import 'package:rick_and_morty/core/presentation/theme/app_theme.dart';
-import 'package:rick_and_morty/features/characters/presentation/screens/characters_list/characters_list_screen.dart';
-import 'package:rick_and_morty/features/characters/presentation/screens/favorites/favorites_screen.dart';
+
+import 'core/infrastructure/local/hive_service.dart';
+import 'core/presentation/theme/app_theme.dart';
+import 'features/characters/presentation/screens/characters_list/characters_list_screen.dart';
+import 'features/characters/presentation/screens/favorites/favorites_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  final hiveService = HiveService();
+  await hiveService.init();
+
   runApp(
-    const ProviderScope(
-      child: MyApp(),
+    ProviderScope(
+      overrides: [
+        hiveServiceProvider.overrideWith((_) async => hiveService),
+      ],
+      child: const MyApp(),
     ),
   );
 }
@@ -21,19 +28,22 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Initialize Hive
-    ref.watch(hiveServiceProvider);
+    final themeModeAsync = ref.watch(themeModeProvider);
 
-    final themeMode = ref.watch(themeModeProvider);
+    final themeMode = themeModeAsync.when(
+      data: (mode) => mode == ThemeModeEnum.dark
+          ? flutter.ThemeMode.dark
+          : flutter.ThemeMode.light,
+      loading: () => flutter.ThemeMode.light,
+      error: (_, __) => flutter.ThemeMode.light,
+    );
 
     return MaterialApp(
       title: 'Rick and Morty',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode == ThemeModeEnum.dark
-          ? flutter.ThemeMode.dark
-          : flutter.ThemeMode.light,
+      themeMode: themeMode,
       home: const MainScreen(),
     );
   }

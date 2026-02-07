@@ -1,8 +1,27 @@
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:rick_and_morty/features/characters/domain/character.dart';
-import 'package:rick_and_morty/features/characters/infrastructure/repos/characters_repository.dart';
+
+import '../../../../core/infrastructure/local/hive_service.dart';
+import '../../domain/character.dart';
+import '../../infrastructure/repos/characters_repository.dart';
 
 part 'characters_provider.g.dart';
+
+@riverpod
+class IsLoadingMore extends _$IsLoadingMore {
+  @override
+  bool build() => false;
+
+  void set(bool value) => state = value;
+}
+
+@riverpod
+class HasMoreToShow extends _$HasMoreToShow {
+  @override
+  bool build() => true;
+
+  void set(bool value) => state = value;
+}
 
 @riverpod
 class CharactersList extends _$CharactersList {
@@ -10,7 +29,7 @@ class CharactersList extends _$CharactersList {
   bool _hasMore = true;
   List<Character> _allLoadedCharacters = [];
   int _displayedCount = 0;
-  static const int _itemsPerLoad = 10; // Количество персонажей за раз
+  static const int _itemsPerLoad = 10;
 
   @override
   Future<List<Character>> build() async {
@@ -21,51 +40,68 @@ class CharactersList extends _$CharactersList {
       (error) => throw Exception(error),
       (response) {
         _hasMore = response.info.next != null;
-        _allLoadedCharacters = response.results;
-        _displayedCount = _itemsPerLoad;
-        
-        // Возвращаем только первые 10 персонажей
+        _allLoadedCharacters = List<Character>.from(response.results);
+        _displayedCount =
+            _allLoadedCharacters.length < _itemsPerLoad
+                ? _allLoadedCharacters.length
+                : _itemsPerLoad;
+        _syncHasMore();
         return _allLoadedCharacters.take(_displayedCount).toList();
       },
     );
   }
 
+  void _syncHasMore() {
+    ref.read(hasMoreToShowProvider.notifier).set(
+      _displayedCount < _allLoadedCharacters.length || _hasMore,
+    );
+  }
+
   Future<void> loadMore() async {
-    if (state.isLoading) return;
-    
-    // Если есть загруженные, но не отображенные персонажи
+    if (state.isLoading || ref.read(isLoadingMoreProvider)) return;
+
+    // Показать следующую порцию из уже загруженного буфера.
     if (_displayedCount < _allLoadedCharacters.length) {
-      _displayedCount += _itemsPerLoad;
-      final newDisplayedCount = _displayedCount > _allLoadedCharacters.length 
-          ? _allLoadedCharacters.length 
-          : _displayedCount;
-      
-      state = AsyncData(_allLoadedCharacters.take(newDisplayedCount).toList());
+      _displayedCount = (_displayedCount + _itemsPerLoad)
+          .clamp(0, _allLoadedCharacters.length);
+      state = AsyncData(
+        _allLoadedCharacters.take(_displayedCount).toList(),
+      );
+      _syncHasMore();
       return;
     }
 
-    // Если нужно загрузить новую страницу с API
+    // Нечего загружать с API.
     if (!_hasMore) return;
 
-    final repository = ref.watch(charactersRepositoryProvider);
+    ref.read(isLoadingMoreProvider.notifier).set(true);
     _currentPage++;
 
-    final result = await repository.getCharacters(page: _currentPage);
+    try {
+      final repository = ref.read(charactersRepositoryProvider);
+      final result = await repository.getCharacters(page: _currentPage);
 
-    result.fold(
-      (error) => throw Exception(error),
-      (response) {
-        _hasMore = response.info.next != null;
-        _allLoadedCharacters.addAll(response.results);
-        _displayedCount += _itemsPerLoad;
-        
-        final newDisplayedCount = _displayedCount > _allLoadedCharacters.length 
-            ? _allLoadedCharacters.length 
-            : _displayedCount;
-        
-        state = AsyncData(_allLoadedCharacters.take(newDisplayedCount).toList());
-      },
-    );
+      result.fold(
+        (error) => _currentPage--,
+        (response) {
+          _hasMore = response.info.next != null;
+          _allLoadedCharacters = [
+            ..._allLoadedCharacters,
+            ...response.results,
+          ];
+          _displayedCount = (_displayedCount + _itemsPerLoad)
+              .clamp(0, _allLoadedCharacters.length);
+          state = AsyncData(
+            _allLoadedCharacters.take(_displayedCount).toList(),
+          );
+        },
+      );
+    } catch (_) {
+      _currentPage--;
+    } finally {
+      ref.read(isLoadingMoreProvider.notifier).set(false);
+      _syncHasMore();
+    }
   }
 
   Future<void> refresh() async {
@@ -73,12 +109,8 @@ class CharactersList extends _$CharactersList {
     _hasMore = true;
     _allLoadedCharacters = [];
     _displayedCount = 0;
+    ref.read(hasMoreToShowProvider.notifier).set(true);
     ref.invalidateSelf();
-  }
-
-  // Проверка, есть ли еще персонажи для отображения
-  bool get hasMoreToShow {
-    return _displayedCount < _allLoadedCharacters.length || _hasMore;
   }
 }
 
@@ -86,41 +118,51 @@ class CharactersList extends _$CharactersList {
 class FavoriteCharacters extends _$FavoriteCharacters {
   @override
   List<Character> build() {
-    final repository = ref.watch(charactersRepositoryProvider);
-    return repository.getFavorites();
+    final hiveAsync = ref.watch(hiveServiceProvider);
+    return hiveAsync.when(
+      data: (hive) =>
+          hive.getAllFavorites().map(Character.fromJson).toList(),
+      loading: () => [],
+      error: (_, __) => [],
+    );
   }
 
   Future<void> toggleFavorite(Character character) async {
-    final repository = ref.read(charactersRepositoryProvider);
-    final isFavorite = repository.isFavorite(character.id);
+    final hiveService = ref.read(hiveServiceProvider).requireValue;
+    final id = character.id.toString();
 
-    if (isFavorite) {
-      await repository.removeFromFavorites(character.id);
+    if (hiveService.containsFavorite(id)) {
+      await hiveService.removeFavorite(id);
     } else {
-      await repository.addToFavorites(character);
+      await hiveService.saveFavorite(id, character.toJson());
     }
 
-    // Refresh the state
-    state = repository.getFavorites();
+    state = hiveService
+        .getAllFavorites()
+        .map(Character.fromJson)
+        .toList();
   }
+}
 
-  bool isFavorite(int characterId) {
-    return state.any((char) => char.id == characterId);
-  }
+/// Проверка, является ли персонаж избранным.
+@riverpod
+bool isFavorite(Ref ref, int characterId) {
+  final favorites = ref.watch(favoriteCharactersProvider);
+  return favorites.any((c) => c.id == characterId);
+}
 
-  List<Character> getSorted(String sortBy) {
-    final sorted = [...state];
-    switch (sortBy) {
-      case 'name':
-        sorted.sort((a, b) => a.name.compareTo(b.name));
-        break;
-      case 'status':
-        sorted.sort((a, b) => a.status.compareTo(b.status));
-        break;
-      case 'species':
-        sorted.sort((a, b) => a.species.compareTo(b.species));
-        break;
-    }
-    return sorted;
+/// Отсортированный список избранных.
+@riverpod
+List<Character> sortedFavorites(Ref ref, String sortBy) {
+  final favorites = ref.watch(favoriteCharactersProvider);
+  final sorted = [...favorites];
+  switch (sortBy) {
+    case 'name':
+      sorted.sort((a, b) => a.name.compareTo(b.name));
+    case 'status':
+      sorted.sort((a, b) => a.status.compareTo(b.status));
+    case 'species':
+      sorted.sort((a, b) => a.species.compareTo(b.species));
   }
+  return sorted;
 }
