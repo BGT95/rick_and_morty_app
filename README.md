@@ -283,7 +283,7 @@ class CharactersList extends _$CharactersList {
 
 - **Base URL**: `https://rickandmortyapi.com/api`
 - **Endpoint**: `/character?page={page}`
-- Пагинация: 20 персонажей на страницу
+- Пагинация: 10 персонажей на страницу
 
 ## 📝 TODO / Возможные улучшения
 
