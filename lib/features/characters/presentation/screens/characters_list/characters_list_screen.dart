@@ -3,7 +3,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../core/presentation/theme/app_theme.dart';
-import '../../../../../core/presentation/widgets/character_card.dart';
+import '../../widgets/character_card.dart';
 import '../../providers/characters_provider.dart';
 
 class CharactersListScreen extends HookConsumerWidget {

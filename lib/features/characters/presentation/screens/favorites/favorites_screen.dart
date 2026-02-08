@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../../../core/presentation/widgets/character_card.dart';
+import '../../widgets/character_card.dart';
 import '../../providers/characters_provider.dart';
 
 part 'favorites_screen.g.dart';
