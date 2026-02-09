@@ -50,3 +50,15 @@ app.*.map.json
 # Hive
 *.hive
 *.lock
+
+# Dev scripts / tools
+clear_hive_data.ps1
+devtools_options.yaml
+run_chrome_no_cors.bat
+
+# Documentation (auto-generated)
+CORS_FIX.md
+HIVE_ERROR_FIX.md
+QUICK_FIX.md
+FIXES_COMPLETE.md
+README_FIXED.md

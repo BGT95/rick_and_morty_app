@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'core/infrastructure/local/hive_service.dart';
 import 'core/presentation/theme/app_theme.dart';
+import 'core/presentation/widgets/offline_banner.dart';
 import 'features/characters/presentation/screens/characters_list/characters_list_screen.dart';
 import 'features/characters/presentation/screens/favorites/favorites_screen.dart';
 
@@ -67,7 +68,12 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: Column(
+        children: [
+          const OfflineBanner(),
+          Expanded(child: _screens[_selectedIndex]),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {

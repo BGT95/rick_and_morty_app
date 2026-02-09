@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -6,6 +8,8 @@ import '../../domain/character.dart';
 import '../../infrastructure/repos/characters_repository.dart';
 
 part 'characters_provider.g.dart';
+
+// ── Вспомогательные провайдеры ──
 
 @riverpod
 class IsLoadingMore extends _$IsLoadingMore {
@@ -23,6 +27,41 @@ class HasMoreToShow extends _$HasMoreToShow {
   void set(bool value) => state = value;
 }
 
+// ── Поиск и фильтры ──
+
+@riverpod
+class SearchQuery extends _$SearchQuery {
+  Timer? _debounce;
+
+  @override
+  String build() => '';
+
+  void set(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      if (state != value) {
+        state = value;
+      }
+    });
+  }
+
+  /// Немедленная установка (без debounce) — для очистки.
+  void clear() {
+    _debounce?.cancel();
+    state = '';
+  }
+}
+
+@riverpod
+class StatusFilter extends _$StatusFilter {
+  @override
+  String build() => ''; // '', 'alive', 'dead', 'unknown'
+
+  void set(String value) => state = value;
+}
+
+// ── Список персонажей ──
+
 @riverpod
 class CharactersList extends _$CharactersList {
   int _currentPage = 1;
@@ -34,17 +73,23 @@ class CharactersList extends _$CharactersList {
   @override
   Future<List<Character>> build() async {
     final repository = ref.watch(charactersRepositoryProvider);
-    final result = await repository.getCharacters(page: 1);
+    final query = ref.watch(searchQueryProvider);
+    final status = ref.watch(statusFilterProvider);
+
+    final result = await repository.getCharacters(
+      page: 1,
+      name: query.isEmpty ? null : query,
+      status: status.isEmpty ? null : status,
+    );
 
     return result.fold(
       (error) => throw Exception(error),
       (response) {
         _hasMore = response.info.next != null;
         _allLoadedCharacters = List<Character>.from(response.results);
-        _displayedCount =
-            _allLoadedCharacters.length < _itemsPerLoad
-                ? _allLoadedCharacters.length
-                : _itemsPerLoad;
+        _displayedCount = _allLoadedCharacters.length < _itemsPerLoad
+            ? _allLoadedCharacters.length
+            : _itemsPerLoad;
         _syncHasMore();
         return _allLoadedCharacters.take(_displayedCount).toList();
       },
@@ -53,14 +98,13 @@ class CharactersList extends _$CharactersList {
 
   void _syncHasMore() {
     ref.read(hasMoreToShowProvider.notifier).set(
-      _displayedCount < _allLoadedCharacters.length || _hasMore,
-    );
+          _displayedCount < _allLoadedCharacters.length || _hasMore,
+        );
   }
 
   Future<void> loadMore() async {
     if (state.isLoading || ref.read(isLoadingMoreProvider)) return;
 
-    // Показать следующую порцию из уже загруженного буфера.
     if (_displayedCount < _allLoadedCharacters.length) {
       _displayedCount = (_displayedCount + _itemsPerLoad)
           .clamp(0, _allLoadedCharacters.length);
@@ -71,7 +115,6 @@ class CharactersList extends _$CharactersList {
       return;
     }
 
-    // Нечего загружать с API.
     if (!_hasMore) return;
 
     ref.read(isLoadingMoreProvider.notifier).set(true);
@@ -79,7 +122,14 @@ class CharactersList extends _$CharactersList {
 
     try {
       final repository = ref.read(charactersRepositoryProvider);
-      final result = await repository.getCharacters(page: _currentPage);
+      final query = ref.read(searchQueryProvider);
+      final status = ref.read(statusFilterProvider);
+
+      final result = await repository.getCharacters(
+        page: _currentPage,
+        name: query.isEmpty ? null : query,
+        status: status.isEmpty ? null : status,
+      );
 
       result.fold(
         (error) => _currentPage--,
@@ -113,6 +163,8 @@ class CharactersList extends _$CharactersList {
     ref.invalidateSelf();
   }
 }
+
+// ── Избранное ──
 
 @riverpod
 class FavoriteCharacters extends _$FavoriteCharacters {
