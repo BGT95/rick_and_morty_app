@@ -55,10 +55,12 @@ class CharacterCard extends HookConsumerWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  CachedNetworkImage(
-                    imageUrl: character.image,
-                    fit: BoxFit.cover,
-                    fadeInDuration: const Duration(milliseconds: 200),
+                  Hero(
+                    tag: 'character_${character.id}',
+                    child: CachedNetworkImage(
+                      imageUrl: character.image,
+                      fit: BoxFit.cover,
+                      fadeInDuration: const Duration(milliseconds: 200),
                     placeholder: (context, url) => Container(
                       color: Colors.grey[300],
                       child: Center(
@@ -78,6 +80,7 @@ class CharacterCard extends HookConsumerWidget {
                           color: Colors.grey[500],
                         ),
                       ),
+                    ),
                     ),
                   ),
                   // Status badge

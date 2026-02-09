@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../core/presentation/theme/app_theme.dart';
 import '../../widgets/character_card.dart';
 import '../../providers/characters_provider.dart';
+import '../character_detail/character_detail_screen.dart';
 
 class CharactersListScreen extends HookConsumerWidget {
   const CharactersListScreen({super.key});
@@ -127,11 +128,16 @@ class CharactersListScreen extends HookConsumerWidget {
                   );
                 }
 
+                final character = characters[index];
                 return CharacterCard(
-                  character: characters[index],
-                  onTap: () {
-                    // TODO: Navigate to detail screen
-                  },
+                  character: character,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          CharacterDetailScreen(character: character),
+                    ),
+                  ),
                 );
               },
             ),

@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/domain/api_response.dart';
 import '../../../../core/infrastructure/local/hive_service.dart';
 import '../../domain/character.dart';
+import '../../domain/episode.dart';
 import '../data_sources/characters_remote_data_source.dart';
 
 part 'characters_repository.g.dart';
@@ -39,7 +40,6 @@ class CharactersRepository {
         status: status,
       );
 
-      // Кэшируем результат
       await hiveService.cacheItems(
         response.results.map((c) => c.toJson()).toList(),
         page,
@@ -47,7 +47,6 @@ class CharactersRepository {
 
       return right(response);
     } on DioException catch (e) {
-      // При ошибке сети — пробуем вернуть кэш
       final cached = _cachedCharacters(page);
       if (cached.isNotEmpty) {
         return right(
@@ -74,6 +73,34 @@ class CharactersRepository {
     }
   }
 
+  /// Загружает нескольких персонажей по ID.
+  Future<Either<String, List<Character>>> getCharactersByIds(
+    List<int> ids,
+  ) async {
+    try {
+      final characters = await remoteDataSource.getCharactersByIds(ids);
+      return right(characters);
+    } on DioException catch (e) {
+      return left(e.message ?? 'Ошибка сети');
+    } catch (e) {
+      return left(e.toString());
+    }
+  }
+
+  /// Загружает эпизоды по ID.
+  Future<Either<String, List<Episode>>> getEpisodesByIds(
+    List<int> ids,
+  ) async {
+    try {
+      final episodes = await remoteDataSource.getEpisodesByIds(ids);
+      return right(episodes);
+    } on DioException catch (e) {
+      return left(e.message ?? 'Ошибка сети');
+    } catch (e) {
+      return left(e.toString());
+    }
+  }
+
   // ── Favorites ──
 
   Future<void> addToFavorites(Character character) async {
@@ -92,18 +119,12 @@ class CharactersRepository {
   }
 
   List<Character> getFavorites() {
-    return hiveService
-        .getAllFavorites()
-        .map(Character.fromJson)
-        .toList();
+    return hiveService.getAllFavorites().map(Character.fromJson).toList();
   }
 
   // ── Helpers ──
 
   List<Character> _cachedCharacters(int page) {
-    return hiveService
-        .getCachedItems(page)
-        .map(Character.fromJson)
-        .toList();
+    return hiveService.getCachedItems(page).map(Character.fromJson).toList();
   }
 }

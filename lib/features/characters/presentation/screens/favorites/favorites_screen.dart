@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../widgets/character_card.dart';
 import '../../providers/characters_provider.dart';
+import '../character_detail/character_detail_screen.dart';
 
 part 'favorites_screen.g.dart';
 
@@ -84,9 +85,13 @@ class FavoritesScreen extends ConsumerWidget {
                 final character = sortedFavorites[index];
                 return CharacterCard(
                   character: character,
-                  onTap: () {
-                    // TODO: Navigate to detail screen
-                  },
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          CharacterDetailScreen(character: character),
+                    ),
+                  ),
                 );
               },
             ),
