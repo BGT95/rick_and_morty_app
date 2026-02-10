@@ -172,8 +172,7 @@ class FavoriteCharacters extends _$FavoriteCharacters {
   List<Character> build() {
     final hiveAsync = ref.watch(hiveServiceProvider);
     return hiveAsync.when(
-      data: (hive) =>
-          hive.getAllFavorites().map(Character.fromJson).toList(),
+      data: (hive) => hive.getAllFavorites().map(Character.fromJson).toList(),
       loading: () => [],
       error: (_, __) => [],
     );
@@ -189,10 +188,7 @@ class FavoriteCharacters extends _$FavoriteCharacters {
       await hiveService.saveFavorite(id, character.toJson());
     }
 
-    state = hiveService
-        .getAllFavorites()
-        .map(Character.fromJson)
-        .toList();
+    state = hiveService.getAllFavorites().map(Character.fromJson).toList();
   }
 }
 

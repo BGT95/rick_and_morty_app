@@ -61,26 +61,26 @@ class CharacterCard extends HookConsumerWidget {
                       imageUrl: character.image,
                       fit: BoxFit.cover,
                       fadeInDuration: const Duration(milliseconds: 200),
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[300],
-                      child: Center(
-                        child: Icon(
-                          Icons.person,
-                          size: 48,
-                          color: Colors.grey[400],
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[300],
+                        child: Center(
+                          child: Icon(
+                            Icons.person,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
                         ),
                       ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[300],
-                      child: Center(
-                        child: Icon(
-                          Icons.broken_image,
-                          size: 48,
-                          color: Colors.grey[500],
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[300],
+                        child: Center(
+                          child: Icon(
+                            Icons.broken_image,
+                            size: 48,
+                            color: Colors.grey[500],
+                          ),
                         ),
                       ),
-                    ),
                     ),
                   ),
                   // Status badge
@@ -147,9 +147,10 @@ class CharacterCard extends HookConsumerWidget {
                     Flexible(
                       child: Text(
                         character.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),

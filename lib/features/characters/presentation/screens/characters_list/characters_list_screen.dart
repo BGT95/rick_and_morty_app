@@ -36,8 +36,7 @@ class CharactersListScreen extends HookConsumerWidget {
         title: isSearchOpen.value
             ? _SearchField(
                 controller: searchController,
-                onChanged: (v) =>
-                    ref.read(searchQueryProvider.notifier).set(v),
+                onChanged: (v) => ref.read(searchQueryProvider.notifier).set(v),
                 onClose: () {
                   isSearchOpen.value = false;
                   searchController.clear();
@@ -76,8 +75,7 @@ class CharactersListScreen extends HookConsumerWidget {
                   ? Icons.light_mode
                   : Icons.dark_mode,
             ),
-            onPressed: () =>
-                ref.read(themeModeProvider.notifier).toggleTheme(),
+            onPressed: () => ref.read(themeModeProvider.notifier).toggleTheme(),
           ),
         ],
       ),
@@ -92,8 +90,7 @@ class CharactersListScreen extends HookConsumerWidget {
           // ── Список ──
           Expanded(
             child: charactersAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -103,14 +100,13 @@ class CharactersListScreen extends HookConsumerWidget {
                     const SizedBox(height: 16),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Text('Ошибка: $error',
-                          textAlign: TextAlign.center),
+                      child:
+                          Text('Ошибка: $error', textAlign: TextAlign.center),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () => ref
-                          .read(charactersListProvider.notifier)
-                          .refresh(),
+                      onPressed: () =>
+                          ref.read(charactersListProvider.notifier).refresh(),
                       child: const Text('Повторить'),
                     ),
                   ],
@@ -134,9 +130,8 @@ class CharactersListScreen extends HookConsumerWidget {
                 final hasMore = ref.watch(hasMoreToShowProvider);
 
                 return RefreshIndicator(
-                  onRefresh: () => ref
-                      .read(charactersListProvider.notifier)
-                      .refresh(),
+                  onRefresh: () =>
+                      ref.read(charactersListProvider.notifier).refresh(),
                   child: GridView.builder(
                     controller: scrollController,
                     padding: const EdgeInsets.all(16),
@@ -147,8 +142,7 @@ class CharactersListScreen extends HookConsumerWidget {
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
                     ),
-                    itemCount:
-                        characters.length + (hasMore ? 1 : 0),
+                    itemCount: characters.length + (hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == characters.length) {
                         return Center(
@@ -163,11 +157,9 @@ class CharactersListScreen extends HookConsumerWidget {
                                   )
                                 : TextButton(
                                     onPressed: () => ref
-                                        .read(charactersListProvider
-                                            .notifier)
+                                        .read(charactersListProvider.notifier)
                                         .loadMore(),
-                                    child:
-                                        const Text('Загрузить ещё'),
+                                    child: const Text('Загрузить ещё'),
                                   ),
                           ),
                         );
@@ -179,8 +171,8 @@ class CharactersListScreen extends HookConsumerWidget {
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute<void>(
-                            builder: (_) => CharacterDetailScreen(
-                                character: character),
+                            builder: (_) =>
+                                CharacterDetailScreen(character: character),
                           ),
                         ),
                       );

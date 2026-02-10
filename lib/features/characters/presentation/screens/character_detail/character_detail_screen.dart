@@ -78,7 +78,8 @@ class CharacterDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
-                    child: _InfoGrid(character: character, colorScheme: colorScheme),
+                    child: _InfoGrid(
+                        character: character, colorScheme: colorScheme),
                   ),
                   const SizedBox(height: 24),
 
@@ -446,8 +447,7 @@ class _RelatedCharacterAvatar extends StatelessWidget {
               tag: 'character_${character.id}',
               child: CircleAvatar(
                 radius: 32,
-                backgroundImage:
-                    CachedNetworkImageProvider(character.image),
+                backgroundImage: CachedNetworkImageProvider(character.image),
               ),
             ),
             const SizedBox(height: 6),
