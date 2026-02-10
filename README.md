@@ -64,7 +64,7 @@ lib/
 ```bash
 # 1. Клонировать
 git clone <repository-url>
-cd testwork
+cd rick_and_morty_app
 
 # 2. Зависимости
 flutter pub get
